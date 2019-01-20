@@ -26,6 +26,9 @@ Texture blue_ghost, red_ghost, orange_ghost, green_ghost;
 Texture point_texture; 
 
 int points = 0; // Iloœæ punktów zdobytych przez gracza. Na pocz¹tku jest równa zero.
+int directionPakman = 0;	// Kierunek ruchu Pakmana
+int lastDirectionPakman;	// Ostatnio Pakman rusza³ siê w kierunku...
+int lastDirectionGhost[GHOST_NUMBER];	// Ostatnio duszek porusza³ siê w stronê...
 
 
 // uint8_t to jeden bajt, czyli 8 zer/jedynek.
@@ -67,14 +70,48 @@ bool points_table[GRID_Y][GRID_X] =
 // Funkcja movePakman s³u¿y do poruszania Pakmana. Pobiera argument dir który jest kierunkiem w którym u¿ytkownik chcia³by poruszyæ Pakmanem.
 // Funkcja sprawdza czy z aktualnej pozycji Pakmana da siê poruszyæ w zadanym kierunku i zmienia pozycjê Pakmana je¿eli to mo¿liwe.
 // Je¿eli Pakman jest w miejscu w którym znajdujê siê punkt to ten punkt jest usuwany z planszy, a dodany do tych zdobytych przez Pakmana.
-void movePakman(int dir)
+void movePakman()
 {
 	float position_x = (sprite_pakman.getPosition().x / SIZE_GRID); // Pobranie pozycji X podzielonej przez szerokoœæ pojedyñczej "siatki"
 	float position_y = (sprite_pakman.getPosition().y / SIZE_GRID); // Pobranie pozycji Y podzielonej przez szerokoœæ pojedyñczej "siatki"
 	uint8_t current_grid = gameArea[int(position_y)][int(position_x)]; // Pobranie wartoœci œcian z aktualnego miejsca Pakmana
 
+	switch (directionPakman)
+	{
+	case 1:
+		if (!(current_grid & RIGHT_WALL))
+		{
+			lastDirectionPakman = directionPakman;
+		}
+		break;
+
+	case 2:
+		if (!(current_grid & BOTTOM_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Pakmana w tym kierunku
+		{
+			lastDirectionPakman = directionPakman;
+		}
+		break;
+
+	case 3: // Kierunek 3 - lewo
+		if (!(current_grid & LEFT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Pakmana w tym kierunku
+		{
+			lastDirectionPakman = directionPakman;
+		}
+		break;
+
+	case 4: // Kierunek 4 - prawo
+		if (!(current_grid & TOP_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Pakmana w tym kierunku
+		{
+			lastDirectionPakman = directionPakman;
+		}
+		break;
+	default: // Kierunek ró¿ny od pozosta³ych czterech, akcja "domyœlna" gdy nie pasuje do ¿adnej z opcji
+		break;
+	}
+
+
 	// Sprawdzamy w którym kierunku u¿ytkownik chce siê poruszaæ i dzia³amy zale¿nie od tego kierunku
-	switch (dir)
+	switch (lastDirectionPakman)
 	{
 	case 1: // Kierunek 1 - prawo
 		if (!(current_grid & RIGHT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Pakmana w tym kierunku
@@ -141,74 +178,100 @@ void moveGhosts()
 	// Wartoœæ X i Y Pakmana jest taka sama dla ka¿dego duszka wiêc pobieramy j¹ przed pêtl¹.
 	float pakman_x = (sprite_pakman.getPosition().x / SIZE_GRID); // Pobranie pozycji X Pakmana
 	float pakman_y = (sprite_pakman.getPosition().y / SIZE_GRID); // Pobranie pozycji Y Pakmana
+	float ghost_x, ghost_y;
+	uint8_t ghost_grid;
+	int directionGhost;
 
-	// W tej pêtli przechodzimy po wszystkich duszach i ruszamy ka¿dym z nich je¿eli to mo¿liwe
+	// W tej pêtli przechodzimy po wszystkich duszkach i ruszamy ka¿dym z nich je¿eli to mo¿liwe
 	for (int current_ghost = 0; current_ghost < GHOST_NUMBER; current_ghost++)
 	{
-		float ghost_x = (sprite_ghost[current_ghost].getPosition().x / SIZE_GRID); // Pobieramy X'ow¹ wartoœæ duszka
-		float ghost_y = (sprite_ghost[current_ghost].getPosition().y / SIZE_GRID); // Pobieramy Y'ow¹ wartoœæ duszka
-		uint8_t ghost_grid = gameArea[int(ghost_y)][int(ghost_x)]; // Pobieramy wartoœæ pola w którym jest Duszek 
+		ghost_x = (sprite_ghost[current_ghost].getPosition().x / SIZE_GRID); // Pobieramy X'ow¹ wartoœæ duszka
+		ghost_y = (sprite_ghost[current_ghost].getPosition().y / SIZE_GRID); // Pobieramy Y'ow¹ wartoœæ duszka
+		ghost_grid = gameArea[int(ghost_y)][int(ghost_x)]; // Pobieramy wartoœæ pola w którym jest Duszek 
+		bool moved = false;
 
-		int difference_x = (int)pakman_x - (int)ghost_x; // Obliczamy odleg³oœæ i kierunek od Pakmana do Duszka (w osi X)
-		int difference_y = (int)pakman_y - (int)ghost_y; // Obliczamy odleg³oœæ i kierunek od Pakmana do Duszka (w osi Y)
+		while (moved == false)
+		{
+			directionGhost = ((rand() % 12) + 1); // Ustawiamy randomow¹ wartoœæ od 1 do 8
+			if (directionGhost < 5) // Je¿eli wartoœæ jest mniejsza od 4 to zmieniamy kierunek, inaczej, zostawiamy taki jak poprzedni
+			{
+				switch (directionGhost) // Tutaj tak jak w Pakmanie, wed³ug obranego kierunku przesuwamy Duszka
+				{
+				case 1:
+					if (!(ghost_grid & RIGHT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+					{
+						lastDirectionGhost[current_ghost] = directionGhost;
+					}
+					break;
+				case 2:
+					if (!(ghost_grid & BOTTOM_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+					{
+						lastDirectionGhost[current_ghost] = directionGhost;
+					}
+					break;
+				case 3:
+					if (!(ghost_grid & LEFT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+					{
+						lastDirectionGhost[current_ghost] = directionGhost;
+					}
+					break;
+				case 4:
+					if (!(ghost_grid & TOP_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+					{
+						lastDirectionGhost[current_ghost] = directionGhost;
+					}
+					break;
+				default:
+					break;
+				}
+			}
 
-		int direction = 0; // Ustawiamy pocz¹tkowy kierunek poruszania duszka na 0
+			switch (lastDirectionGhost[current_ghost]) // Tutaj tak jak w Pakmanie, wed³ug obranego kierunku przesuwamy Duszka
+			{
+			case 1:
+				if (!(ghost_grid & RIGHT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+				{
+					sprite_ghost[current_ghost].move(SIZE_GRID, 0);
+					moved = true;
+				}
+				break;
+			case 2:
+				if (!(ghost_grid & BOTTOM_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+				{
+					sprite_ghost[current_ghost].move(0, SIZE_GRID);
+					moved = true;
+				}
+				break;
+			case 3:
+				if (!(ghost_grid & LEFT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+				{
+					sprite_ghost[current_ghost].move(SIZE_GRID * (-1), 0);
+					moved = true;
+				}
+				break;
+			case 4:
+				if (!(ghost_grid & TOP_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+				{
+					sprite_ghost[current_ghost].move(0, SIZE_GRID * (-1));
+					moved = true;
+				}
+				break;
+			default:
+				break;
+			}
 
-		if (abs(difference_x) > abs(difference_y)) // Tutaj porównujemy czy dalej jest do Pakmana w osi X czy w osi Y. Je¿eli w osi X to wchodzimy do if'a.
-		{
-			if (difference_x > 0) // Je¿eli odleg³oœæ do Pakmana jest dodatnia to znaczy ¿e musimy siê poruszaæ w prawo.
-			{
-				direction = 1;
-			}
-			else // Je¿eli odleg³oœæ do Pakmana jest ujemna to znaczy ¿e musimy siê poruszaæ w lewo.
-			{
-				direction = 3;
-			}
-		}
-		else if (abs(difference_x) < abs(difference_y)) // Tutaj porównujemy czy dalej jest do Pakmana w osi X czy w osi Y. Je¿eli w osi Y to wchodzimy do if'a.
-		{
-			if (difference_y > 0) // Je¿eli odleg³oœæ do Pakmana jest dodatnia to znaczy ¿e musimy siê poruszaæ w dó³.
-			{
-				direction = 2;
-			}
-			else // Je¿eli odleg³oœæ do Pakmana jest ujemna to znaczy ¿e musimy siê poruszaæ w górê.
-			{
-				direction = 4;
-			}
-		}
-		else // Je¿eli odleg³oœæ w osi X i w osi Y jest taka sama to...
-		{
-			direction = ((rand() % 4) + 1); // Ustawiamy randomow¹ wartoœæ od 1 do 4
-		}
+			ghost_x = (sprite_ghost[current_ghost].getPosition().x / SIZE_GRID); // Pobieramy X'ow¹ wartoœæ duszka
+			ghost_y = (sprite_ghost[current_ghost].getPosition().y / SIZE_GRID); // Pobieramy Y'ow¹ wartoœæ duszka
 
-		switch (direction) // Tutaj tak jak w Pakmanie, wed³ug obranego kierunku przesuwamy Duszka
-		{
-		case 1:
-			if (!(ghost_grid & RIGHT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+			// Po poruszeniu trzeba sprawdziæ parê rzeczy
+			if (ghost_x < 0) // Je¿eli Duszek poruszy³ siê poza planszê z lewej strony, to przesuwamy go na praw¹ stronê...
 			{
-				sprite_ghost[current_ghost].move(SIZE_GRID, 0);
+				sprite_ghost[current_ghost].move(GRID_X * SIZE_GRID, 0); // ...przesuwamy Duszek o szerokoœæ siatki pomno¿on¹ przez jej iloœæ w osi X
 			}
-			break;
-		case 2:
-			if (!(ghost_grid & BOTTOM_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
+			else if (ghost_x >= GRID_X) // Je¿eli Duszek poruszy³ siê poza planszê z prawej strony...
 			{
-				sprite_ghost[current_ghost].move(0, SIZE_GRID);
+				sprite_ghost[current_ghost].move(GRID_X * SIZE_GRID * (-1), 0); // ...przesuwamy Duszek o szerokoœæ siatki pomno¿on¹ przez jej iloœæ w osi X oraz przemno¿one przez -1
 			}
-			break;
-		case 3:
-			if (!(ghost_grid & LEFT_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
-			{
-				sprite_ghost[current_ghost].move(SIZE_GRID * (-1), 0);
-			}
-			break;
-		case 4:
-			if (!(ghost_grid & TOP_WALL)) // Je¿eli nie ma œciany to mo¿emy ruszyæ Duszka w tym kierunku
-			{
-				sprite_ghost[current_ghost].move(0, SIZE_GRID * (-1));
-			}
-			break;
-		default:
-			break;
 		}
 	}
 }
@@ -240,9 +303,14 @@ bool checkForCollision()
 // G³ówna funkcja, ustawiamy startowe zmienne i obs³ugujemy okna.
 int main()
 {
-	int direction=0;			// Kierunek ruchu Pakmana
+	Clock clock;
+	Time last, now;
+	last = clock.getElapsedTime();
+	now = last;
 	RenderWindow secondWindow;	// Definiujemy drugie okno, nie rusuj¹c go.
 	srand(time(NULL));
+	Font arial;
+	arial.loadFromFile("fonts/arial.ttf");
 
 	// Do wszystkich poprzednio zdefiniowanych tekstur wczytujemy obrazki z plików
 	pakman_prawo.loadFromFile("images/pakman.png");
@@ -303,41 +371,14 @@ int main()
 
 
 	// Tutaj jest g³ówna pêtla programu, jest wykonywana zawsze gdy jakieœ okno programu jest otwarte, g³ówne, lub dodatkowe.
-	while(mainWindow.isOpen() || secondWindow.isOpen())
+	while(mainWindow.isOpen())
 	{
-		Event mainEvent, secondaryEvent; // Tworzymy dwa obiekty klasy Event. Do nich przypisane s¹ wydarzenia które odczytujemy.
-		
-		// Pêtla wykonuj¹ca siê gdy mamy otwarte okno g³ówne, sprawdza ka¿dorazowo czy wyst¹pi³y jakieœ wydarzenia zwi¹zane z tym oknem
-		while (mainWindow.pollEvent(mainEvent))
+		now = clock.getElapsedTime();
+
+		if ((now.asMilliseconds() - last.asMilliseconds()) > 200)
 		{
-			if (mainEvent.type == Event::Closed || (mainEvent.type ==Event::KeyPressed && mainEvent.key.code == Keyboard::Escape)) // Je¿eli podczas gry naciœniemy Escape albo Krzy¿yk to okno zostanie zamkniête.
-			{
-				mainWindow.close(); // Zamkniêcie okna
-			}
-
-			if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Right) // Je¿eli naciœniety klawisz to strza³ka w prawo
-			{
-				direction = 1; // Ustawiamy kierunek na prawo
-			}
-			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Down) // Je¿eli naciœniety klawisz to strza³ka w dó³
-			{
-				direction = 2; // Ustawiamy kierunek na dó³
-			}
-			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Left) // Je¿eli naciœniety klawisz to strza³ka w lewo
-			{
-				direction = 3; // Ustawiamy kierunek na lewo
-			}
-			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Up) // Je¿eli naciœniety klawisz to strza³ka w górê
-			{
-				direction = 4; // Ustawiamy kierunek na górê
-			}
-			else // Je¿eli ¿aden z powy¿szych nie zosta³ naciœniêty
-			{
-				direction = 0; // Ustawiamy kierunek na zero
-			}
-
-			movePakman(direction); // Poruszamy Pakmanem u¿ywaj¹c kierunku ustawionego przez klawisze
 			moveGhosts(); // Poruszamy duszkami
+			last = now;
 
 			if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
 			{
@@ -351,14 +392,42 @@ int main()
 				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
 				secondWindow.setTitle("WYGRALES!"); // Ustawiamy tytu³ mówi¹cy o wygranej
 			}
+
+			movePakman(); // Poruszamy Pakmanem u¿ywaj¹c kierunku ustawionego przez klawisze
+
+			if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
+			{
+				mainWindow.close(); // Zamykamy g³ówne okno
+				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
+				secondWindow.setTitle("PRZEGRALES!"); // Ustawiamy tytu³ mówi¹cy o przegranej
+			}
 		}
 
-		// Pêtla dla drugiego okna
-		while (secondWindow.pollEvent(secondaryEvent))
+		Event mainEvent; // Tworzymy obiekt klasy Event. Do niego przypisane s¹ wydarzenia które odczytujemy.
+
+		// Pêtla wykonuj¹ca siê gdy mamy otwarte okno g³ówne, sprawdza ka¿dorazowo czy wyst¹pi³y jakieœ wydarzenia zwi¹zane z tym oknem
+		while (mainWindow.pollEvent(mainEvent))
 		{
-			if (secondaryEvent.type == Event::Closed || (secondaryEvent.type == Event::KeyPressed && secondaryEvent.key.code == Keyboard::Escape)) // Je¿eli podczas gry naciœniemy Escape albo Krzy¿yk to okno zostanie zamkniête.
+			if (mainEvent.type == Event::Closed || (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Escape)) // Je¿eli podczas gry naciœniemy Escape albo Krzy¿yk to okno zostanie zamkniête.
 			{
-				secondWindow.close(); // Zamykamy okno
+				mainWindow.close(); // Zamkniêcie okna
+			}
+
+			if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Right) // Je¿eli naciœniety klawisz to strza³ka w prawo
+			{
+				directionPakman = 1; // Ustawiamy kierunek na prawo
+			}
+			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Down) // Je¿eli naciœniety klawisz to strza³ka w dó³
+			{
+				directionPakman = 2; // Ustawiamy kierunek na dó³
+			}
+			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Left) // Je¿eli naciœniety klawisz to strza³ka w lewo
+			{
+				directionPakman = 3; // Ustawiamy kierunek na lewo
+			}
+			else if (mainEvent.type == Event::KeyPressed && mainEvent.key.code == Keyboard::Up) // Je¿eli naciœniety klawisz to strza³ka w górê
+			{
+				directionPakman = 4; // Ustawiamy kierunek na górê
 			}
 		}
 
@@ -425,6 +494,24 @@ int main()
 		mainWindow.draw(sprite_ghost[3]);
 		mainWindow.draw(sprite_pakman); // Na koñcu rysujemy Pakmana
 		mainWindow.display(); // I wyœwietlamy okno ze wszystkim ju¿ "narysowanym" :)
+	}
+	while (secondWindow.isOpen())
+	{
+		Event secondaryEvent;
+		// Pêtla dla drugiego okna
+		while (secondWindow.pollEvent(secondaryEvent))
+		{
+			if (secondaryEvent.type == Event::Closed || (secondaryEvent.type == Event::KeyPressed && secondaryEvent.key.code == Keyboard::Escape)) // Je¿eli podczas gry naciœniemy Escape albo Krzy¿yk to okno zostanie zamkniête.
+			{
+				secondWindow.close(); // Zamykamy okno
+			}
+		}
+
+		Text pointsNow("Punkty: ", arial, 30);
+		pointsNow.setPosition(SIZE_GRID, SIZE_GRID);
+
+		secondWindow.draw(pointsNow);
+		secondWindow.display();
 	}
 	return 0;
 }
