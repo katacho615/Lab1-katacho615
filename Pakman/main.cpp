@@ -1,6 +1,7 @@
 #include "SFML/Window.hpp" // Dodane biblioteki SFML
 #include "SFML/Graphics.hpp"
 #include <ctime>
+#include <string>
 
 using namespace std; // ¯eby nie u¿ywaæ ci¹gle std:: i sf::
 using namespace sf;
@@ -17,6 +18,7 @@ using namespace sf;
 #define TOP_WALL			0x01	// Wartoœæ œciany górnej
 #define GHOST_NUMBER		4		// Iloœæ duszków które zostan¹ stworzone w grze
 #define POINTS_TO_WIN		82		// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
+#define TIME_PER_TICK		250		// Milisekundy
 
 RenderWindow mainWindow(VideoMode( SIZE_WINDOW_X, SIZE_WINDOW_Y, 32), "Pakman"); // Tworzymy okno programu. Obiekt mainWindow jest tworzony przez konstruktor, w nim podajemy rozmiary okna, skalê kolorów, a potem tytu³ okna.
 Sprite sprite_pakman, sprite_point, sprite_ghost[GHOST_NUMBER]; // Tworzenie obiektów Sprite. S¹ to obiekty które mog¹ siê pojawiaæ na oknie programu.
@@ -368,40 +370,10 @@ int main()
 	sprite_ghost[2].setPosition(SIZE_GRID * 0 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2);
 	sprite_ghost[3].setPosition(SIZE_GRID * 9 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2);
 
-
-
 	// Tutaj jest g³ówna pêtla programu, jest wykonywana zawsze gdy jakieœ okno programu jest otwarte, g³ówne, lub dodatkowe.
 	while(mainWindow.isOpen())
 	{
 		now = clock.getElapsedTime();
-
-		if ((now.asMilliseconds() - last.asMilliseconds()) > 200)
-		{
-			moveGhosts(); // Poruszamy duszkami
-			last = now;
-
-			if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
-			{
-				mainWindow.close(); // Zamykamy g³ówne okno
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
-				secondWindow.setTitle("PRZEGRALES!"); // Ustawiamy tytu³ mówi¹cy o przegranej
-			}
-			else if (points == POINTS_TO_WIN) // Je¿eli gracz nie przegra³, a punkty uzyskane s¹ równe z iloœci¹ potrzebn¹ do wygrania...
-			{
-				mainWindow.close(); // Zamykamy g³ówne okno
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
-				secondWindow.setTitle("WYGRALES!"); // Ustawiamy tytu³ mówi¹cy o wygranej
-			}
-
-			movePakman(); // Poruszamy Pakmanem u¿ywaj¹c kierunku ustawionego przez klawisze
-
-			if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
-			{
-				mainWindow.close(); // Zamykamy g³ówne okno
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
-				secondWindow.setTitle("PRZEGRALES!"); // Ustawiamy tytu³ mówi¹cy o przegranej
-			}
-		}
 
 		Event mainEvent; // Tworzymy obiekt klasy Event. Do niego przypisane s¹ wydarzenia które odczytujemy.
 
@@ -429,6 +401,35 @@ int main()
 			{
 				directionPakman = 4; // Ustawiamy kierunek na górê
 			}
+		}
+
+		if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
+		{
+			mainWindow.close(); // Zamykamy g³ówne okno
+			secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
+			secondWindow.setTitle("PRZEGRALES!"); // Ustawiamy tytu³ mówi¹cy o przegranej
+		}
+		else if (points == POINTS_TO_WIN) // Je¿eli gracz nie przegra³, a punkty uzyskane s¹ równe z iloœci¹ potrzebn¹ do wygrania...
+		{
+			mainWindow.close(); // Zamykamy g³ówne okno
+			secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
+			secondWindow.setTitle("WYGRALES!"); // Ustawiamy tytu³ mówi¹cy o wygranej
+		}
+
+		if ((now.asMilliseconds() - last.asMilliseconds()) > TIME_PER_TICK)
+		{
+			movePakman(); // Poruszamy Pakmanem u¿ywaj¹c kierunku ustawionego przez klawisze
+
+			last = now;
+
+			if (checkForCollision() == true) // Je¿eli kolizja wyst¹pi³a, gracz przegra³ wiêc...
+			{
+				mainWindow.close(); // Zamykamy g³ówne okno
+				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "Pakman"); // Otwieramy drugie okno
+				secondWindow.setTitle("PRZEGRALES!"); // Ustawiamy tytu³ mówi¹cy o przegranej
+			}
+
+			moveGhosts(); // Poruszamy duszkami
 		}
 
 		mainWindow.clear(); // Czyszczenie okna
@@ -507,7 +508,9 @@ int main()
 			}
 		}
 
-		Text pointsNow("Punkty: ", arial, 30);
+		string pointsDisplay;
+		pointsDisplay = "Punkty: " + to_string(points);
+		Text pointsNow(pointsDisplay, arial, 30);
 		pointsNow.setPosition(SIZE_GRID, SIZE_GRID);
 
 		secondWindow.draw(pointsNow);
