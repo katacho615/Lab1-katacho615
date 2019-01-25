@@ -19,8 +19,8 @@ using namespace sf;
 #define BOTTOM_WALL			0x02	// Wartoœæ œciany dolnej
 #define TOP_WALL			0x01	// Wartoœæ œciany górnej
 #define GHOST_NUMBER		4		// Iloœæ duszków które zostan¹ stworzone w grze
-#define POINTS_TO_WIN		82	// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
-#define TIME_PER_TICK		400		// Iloœæ czasu pomiêdzy klatkami gry
+#define POINTS_TO_WIN		82		// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
+#define TIME_PER_TICK		300		// Iloœæ czasu pomiêdzy klatkami gry
 #define TIME_PER_FRUIT		12000	// Iloœæ czasu pomiêdzy pojawieniem siê owocków
 
 RenderWindow mainWindow(VideoMode( SIZE_WINDOW_X, SIZE_WINDOW_Y, 32), "Pakman"); // Tworzymy okno programu (rozmiary, skala kolorów, nazwa)
@@ -30,7 +30,10 @@ Texture pakman_prawo, pakman_lewo;								// Tworzymy obiekty tekstur
 Texture pelny, pusty, gora, dol, lewo, prawo, lewo_prawo, gora_dol, gora_lewo, gora_prawo, dol_lewo, dol_prawo;
 Texture blue_ghost, red_ghost, orange_ghost, green_ghost;
 Texture point_texture, fruit_texture;
-Time last, now, startFruit, endFruit;
+Time last, now, timeFruit;
+Clock clockNow;
+Font arial;
+Event mainEvent, secondaryEvent;
 
 class Character
 {
@@ -50,7 +53,7 @@ public:
 		pakman_prawo.loadFromFile("images/pakman.png");
 		sprite_pakman.setTexture(pakman_prawo);
 		sprite_pakman.setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-		sprite_pakman.setPosition(SIZE_GRID * 4 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja startowa Pakmana
+		sprite_pakman.setPosition(SIZE_GRID * 5 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja startowa Pakmana
 		sprite_pakman.setScale(1, 1);
 	}
 	void setDirection(int dir)
@@ -258,16 +261,15 @@ Orange orange;
 
 void saveScore(string score)
 {
-	string temporary, line;
+	string temporary = "";
+	string line = "";
 	ifstream fileInput;
+	fileInput.exceptions(ifstream::failbit | ifstream::badbit);
 	ofstream fileOutput;
+	fileOutput.exceptions(ifstream::failbit | ifstream::badbit);
 	try
 	{
 		fileInput.open("lastScore/score.txt");
-		if (fileInput.fail())
-		{
-			throw -1;
-		}
 		if (fileInput.is_open() == true)
 		{
 			while (getline(fileInput, line))
@@ -276,18 +278,14 @@ void saveScore(string score)
 			}
 		}
 	}
-	catch (int fail)
-	{
-		abort();
+	catch (std::ifstream::failure e) {
+		std::cerr << "Exception opening/reading/closing file\n";
 	}
+	fileInput.close();
 
 	try
 	{
 		fileOutput.open("lastScore/score.txt");
-		if (fileInput.fail())
-		{
-			throw - 1;
-		}
 		fileOutput << temporary << score;
 		if (point.count() >= POINTS_TO_WIN)
 		{
@@ -298,28 +296,21 @@ void saveScore(string score)
 			fileOutput << " LOOSER :(" << endl;
 		}
 		fileOutput.close();
-		fileInput.close();
 
 	}
-		catch (int fail)
-	{
-		abort();
+	catch (std::ifstream::failure e) {
+		std::cerr << "Exception opening/reading/closing file\n";
 	}
 }
 
 int main()
 {
 	// Ustawienia na pocz¹tku rozgrywki
-	Clock clock;
-	Time last, now, startFruit, endFruit;
-	now = clock.getElapsedTime();
+	now = clockNow.getElapsedTime();
 	last = now;
-	startFruit = now;
-	endFruit = now;
+	timeFruit = now;
 	srand(time(NULL));
-	Font arial;
 	arial.loadFromFile("fonts/arial.ttf");
-	Event mainEvent, secondaryEvent;
 
 	pakman_prawo.loadFromFile("images/pakman.png");
 	pakman_lewo.loadFromFile("images/pakman_left.png");
@@ -350,7 +341,7 @@ int main()
 	
 	while(mainWindow.isOpen())
 	{
-		now = clock.getElapsedTime();
+		now = clockNow.getElapsedTime();
 
 		while (mainWindow.pollEvent(mainEvent))
 		{
@@ -407,21 +398,19 @@ int main()
 
 		if(fruit.isFruitset() == false)
 		{
-			if ((now.asMilliseconds() - endFruit.asMilliseconds()) > TIME_PER_FRUIT)
+			if ((now.asMilliseconds() - timeFruit.asMilliseconds()) > TIME_PER_FRUIT)
 			{
 				(rand() % 2) ? cherry.set(true) : orange.set(true);
-				startFruit = now;
-				endFruit = now;
+				timeFruit = now;
 			}
 		}
 		else
 		{
-			if ((now.asMilliseconds() - startFruit.asMilliseconds()) > fruit.getTimeLeft())
+			if ((now.asMilliseconds() - timeFruit.asMilliseconds()) > fruit.getTimeLeft())
 			{
 				cherry.set(false);
 				orange.set(false);
-				startFruit = now;
-				endFruit = now;
+				timeFruit = now;
 			}
 		}
 
@@ -595,6 +584,8 @@ void Pakman::move()
 		break;
 	}
 
+	position_x = (int(sprite_pakman.getPosition().x) / SIZE_GRID);
+
 	if (position_x < 0)
 	{
 		sprite_pakman.move(GRID_X * SIZE_GRID, 0);
@@ -735,7 +726,6 @@ void Point::collectPoints()
 		point.deleteFruit();
 		cherry.set(false);
 		orange.set(false);
-		startFruit = now;
-		endFruit = now;
+		timeFruit = now;
 	}
 }
