@@ -19,9 +19,9 @@ using namespace sf;
 #define BOTTOM_WALL			0x02	// Wartoœæ œciany dolnej
 #define TOP_WALL			0x01	// Wartoœæ œciany górnej
 #define GHOST_NUMBER		4		// Iloœæ duszków które zostan¹ stworzone w grze
-#define POINTS_TO_WIN		82		// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
-#define TIME_PER_TICK		250		// Iloœæ czasu pomiêdzy klatkami gry
-#define TIME_PER_FRUIT		12000	// Co ile milisekund pojawia siê owoc
+#define POINTS_TO_WIN		82	// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
+#define TIME_PER_TICK		400		// Iloœæ czasu pomiêdzy klatkami gry
+#define TIME_PER_FRUIT		12000	// Iloœæ czasu pomiêdzy pojawieniem siê owocków
 
 RenderWindow mainWindow(VideoMode( SIZE_WINDOW_X, SIZE_WINDOW_Y, 32), "Pakman"); // Tworzymy okno programu (rozmiary, skala kolorów, nazwa)
 RenderWindow secondWindow;
@@ -260,29 +260,51 @@ void saveScore(string score)
 {
 	string temporary, line;
 	ifstream fileInput;
-	fileInput.open("lastScore/score.txt");
-
-	if (fileInput.is_open() == true)
+	ofstream fileOutput;
+	try
 	{
-		while (getline(fileInput, line))
+		fileInput.open("lastScore/score.txt");
+		if (fileInput.fail())
 		{
-			temporary = temporary + line + "\n";
+			throw -1;
+		}
+		if (fileInput.is_open() == true)
+		{
+			while (getline(fileInput, line))
+			{
+				temporary = temporary + line + "\n";
+			}
 		}
 	}
+	catch (int fail)
+	{
+		abort();
+	}
 
-	ofstream fileOutput;
-	fileOutput.open("lastScore/score.txt");
-	fileOutput << temporary << score;
-	if (point.count() >= POINTS_TO_WIN)
+	try
 	{
-		fileOutput << " WINNER !!!" << endl;
+		fileOutput.open("lastScore/score.txt");
+		if (fileInput.fail())
+		{
+			throw - 1;
+		}
+		fileOutput << temporary << score;
+		if (point.count() >= POINTS_TO_WIN)
+		{
+			fileOutput << " WINNER !!!" << endl;
+		}
+		else
+		{
+			fileOutput << " LOOSER :(" << endl;
+		}
+		fileOutput.close();
+		fileInput.close();
+
 	}
-	else
+		catch (int fail)
 	{
-		fileOutput << " LOOSER :(" << endl;
+		abort();
 	}
-	fileOutput.close();
-	fileInput.close();
 }
 
 int main()
