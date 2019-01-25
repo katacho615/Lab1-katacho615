@@ -19,8 +19,8 @@ using namespace sf;
 #define TOP_WALL			0x01	// Wartoœæ œciany górnej
 #define GHOST_NUMBER		4		// Iloœæ duszków które zostan¹ stworzone w grze
 #define POINTS_TO_WIN		82		// Iloœæ punktów które trzeba zebraæ by wygraæ (82)
-#define TIME_PER_TICK		250		// 1 jednostka czasu w grze
-#define TIME_PER_FRUIT		2		// Sekundy
+#define TIME_PER_TICK		250		// Iloœæ czasu pomiêdzy klatkami gry
+#define TIME_PER_FRUIT		12000	// Co ile milisekund pojawia siê owoc
 
 RenderWindow mainWindow(VideoMode( SIZE_WINDOW_X, SIZE_WINDOW_Y, 32), "Pakman"); // Tworzymy okno programu (rozmiary, skala kolorów, nazwa)
 RenderWindow secondWindow;
@@ -29,6 +29,7 @@ Texture pakman_prawo, pakman_lewo;								// Tworzymy obiekty tekstur
 Texture pelny, pusty, gora, dol, lewo, prawo, lewo_prawo, gora_dol, gora_lewo, gora_prawo, dol_lewo, dol_prawo;
 Texture blue_ghost, red_ghost, orange_ghost, green_ghost;
 Texture point_texture, fruit_texture;
+Time last, now, startFruit, endFruit;
 
 class Character
 {
@@ -152,15 +153,13 @@ public:
 		return pointsTotal;
 	}
 	void collectPoints();
-	void setFruitIn(int x, int y)
+	void placeFruit()
 	{
-		cout << "setFruit"<<endl;
-		points_table[y][x] = 2;
+		points_table[6][4] = 2;
 	};
-	void deleteFruitIn(int x, int y)
+	void deleteFruit()
 	{
-		cout << "deleteFruit" << endl;
-		points_table[y][x] = 0;
+		points_table[6][4] = 0;
 	};
 protected:
 	int value = 1; // Wartoœæ punktu
@@ -184,90 +183,96 @@ Point point;
 
 class Fruit : public Point
 {
-	friend class Cherry;
-	friend class Orange;
 public:
 	int getTimeLeft()
 	{
-		return timeLeft_Milliseconds;
+		return this->timeLeft_Milliseconds;
 	}
 	bool isFruitset()
 	{
-		return fruitSet;
+		return this->fruitSet;
 	}
-protected:
-	bool fruitSet = false;
-	int value = 0;
-	int timeLeft_Milliseconds = 0;
+
+	void setFruit(bool value)
+	{
+		placeFruit();
+		this->fruitSet = value;
+	}
+	void setValue(int value)
+	{
+		this->value = value;
+	}
+	void setTime(int time)
+	{
+		this->timeLeft_Milliseconds = time;
+	}
+	bool fruitSet;
+	int value;
+	int timeLeft_Milliseconds;
 };
 Fruit fruit;
 
 class Cherry : public Fruit
 {
 public:
-	Cherry(bool create)
+	void set(bool create)
 	{
-		if (create == true) 
+		if (create == true)
 		{
-			point.setFruitIn(4, 6);
-			fruit.fruitSet = true;
-			fruit.value = 20;
-			fruit.timeLeft_Milliseconds = 4;
+			fruit.setFruit(true);
+			fruit.setValue(20);
+			fruit.setTime(6000);
 			fruit_texture.loadFromFile("images/cherry.png");
 			sprite_fruit.setTexture(fruit_texture);
 			sprite_fruit.setPosition(SIZE_GRID * 4 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja owocu
-		}		
-	}
-	~Cherry()
-	{
-		fruit.fruitSet = false;
-		point.deleteFruitIn(4, 6);
-		sprite_fruit.setPosition(SIZE_GRID * 4 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja owocu
+		}
+		else
+		{
+			fruit.setFruit(false);
+			fruit.deleteFruit();
+			sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
+		}
 	}
 };
+Cherry cherry;
 
 class Orange : public Fruit
 {
 public:
-	Orange()
+	void set(bool create)
 	{
-		point.setFruitIn(5, 6);
-		fruit.fruitSet = true;
-		fruit.value = 15;
-		fruit.timeLeft_Milliseconds = 6000;
-		fruit_texture.loadFromFile("images/orange.png");
-		sprite_fruit.setTexture(fruit_texture);
-		sprite_fruit.setPosition(SIZE_GRID * 5 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja owocu
-	}
-	~Orange()
-	{
-		fruit.fruitSet = false;
-		point.deleteFruitIn(5, 6);
-		sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
+		if (create == true)
+		{
+			fruit.setFruit(true);
+			fruit.setValue(15);
+			fruit.setTime(8000);
+			fruit_texture.loadFromFile("images/orange.png");
+			sprite_fruit.setTexture(fruit_texture);
+			sprite_fruit.setPosition(SIZE_GRID * 4 + SIZE_GRID / 2, SIZE_GRID * 6 + SIZE_GRID / 2); // Pozycja owocu
+		}
+		else
+		{
+			fruit.setFruit(false);
+			fruit.deleteFruit();
+			sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
+		}
 	}
 };
+Orange orange;
 
 int main()
 {
+	// Ustawienia na pocz¹tku rozgrywki
 	Clock clock;
 	Time last, now, startFruit, endFruit;
 	now = clock.getElapsedTime();
 	last = now;
-	endFruit = now;
 	startFruit = now;
+	endFruit = now;
 	srand(time(NULL));
 	Font arial;
 	arial.loadFromFile("fonts/arial.ttf");
-	Event mainEvent;
-	Event secondaryEvent;
-	Cherry cherry(false);
-	fruit_texture.loadFromFile("images/orange.png");
-	fruit_texture.loadFromFile("images/cherry.png");
-	sprite_fruit.setTexture(fruit_texture);
-	sprite_fruit.setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-	sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
-	sprite_fruit.setScale(1, 1);
-
+	Event mainEvent, secondaryEvent;
 
 	pakman_prawo.loadFromFile("images/pakman.png");
 	pakman_lewo.loadFromFile("images/pakman_left.png");
@@ -284,9 +289,14 @@ int main()
 	gora_prawo.loadFromFile("images/0x9.png");
 	dol_prawo.loadFromFile("images/0xA.png");
 	point_texture.loadFromFile("images/point.png");
-
-	// Ustawienia na pocz¹tku rozgrywki
 	
+	fruit_texture.loadFromFile("images/orange.png");
+	fruit_texture.loadFromFile("images/cherry.png");
+	sprite_fruit.setTexture(fruit_texture);
+	sprite_fruit.setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
+	sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
+	sprite_fruit.setScale(1, 1);
+
 	sprite_tlo.setScale(1, 1);
 	sprite_point.setScale(1, 1);
 	sprite_point.setTexture(point_texture);
@@ -341,30 +351,33 @@ int main()
 				mainWindow.close();
 				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "PRZEGRALES!");
 			}
-			else if (point.count() == POINTS_TO_WIN) //Sprawdzenie wygranej
+			else if (point.count() >= POINTS_TO_WIN) //Sprawdzenie wygranej
 			{
 				mainWindow.close();
 				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "WYGRALES!");
 			}
 		}
 
-		if (fruit.isFruitset() == false)
+		if(fruit.isFruitset() == false)
 		{
-			if (((int)now.asSeconds() - (int)endFruit.asSeconds()) > TIME_PER_FRUIT)
+			if ((now.asMilliseconds() - endFruit.asMilliseconds()) > TIME_PER_FRUIT)
 			{
-				Cherry cherry(true);
-
+				(rand() % 2) ? cherry.set(true) : orange.set(true);
 				startFruit = now;
+				endFruit = now;
 			}
 		}
 		else
 		{
-			if (((int)now.asSeconds() - (int)startFruit.asSeconds()) > fruit.getTimeLeft())
+			if ((now.asMilliseconds() - startFruit.asMilliseconds()) > fruit.getTimeLeft())
 			{
+				cherry.set(false);
+				orange.set(false);
+				startFruit = now;
 				endFruit = now;
-				cherry.~Cherry();
 			}
 		}
+
 		//"Rysowanie" okna
 		mainWindow.clear(); 
 		for (int i = 0; i < GRID_X; i++) 
@@ -671,5 +684,14 @@ void Point::collectPoints()
 	if (isPointIn(position_x, position_y) == true)
 	{
 		pointTaken(position_x, position_y);
+	}
+	if (fruit.isFruitset() == true && position_x == 4 && position_y == 6)
+	{
+		point.pointsTotal += fruit.value;
+		fruit.deleteFruit();
+		cherry.set(false);
+		orange.set(false);
+		startFruit = now;
+		endFruit = now;
 	}
 }
