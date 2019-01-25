@@ -3,6 +3,7 @@
 #include <ctime>
 #include <string>
 #include <iostream>
+#include <fstream>
 
 using namespace std; 
 using namespace sf;
@@ -36,6 +37,9 @@ class Character
 public:
 	void move();
 	bool checkForCollision();
+protected:
+	int direction;
+	int lastDirection;
 };
 
 class Pakman : public Character
@@ -54,9 +58,6 @@ public:
 		direction = dir;
 	}
 	void move();
-private:
-	int direction;
-	int lastDirection;
 };
 Pakman pakman;
  
@@ -70,40 +71,33 @@ public:
 		if (id == 0)
 		{
 			blue_ghost.loadFromFile("images/ghost_blue.png");
-			sprite_ghost[0].setTexture(blue_ghost);
-			sprite_ghost[0].setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-			sprite_ghost[0].setScale(1, 1);
-			sprite_ghost[0].setPosition(SIZE_GRID * 0 + SIZE_GRID / 2, SIZE_GRID * 0 + SIZE_GRID / 2); // Pozycje startowe duszków
+			sprite_ghost[id].setTexture(blue_ghost);
+			sprite_ghost[id].setPosition(SIZE_GRID * 0 + SIZE_GRID / 2, SIZE_GRID * 0 + SIZE_GRID / 2); // Pozycje startowe duszków
 		}
 		else if (id == 1)
 		{
 			green_ghost.loadFromFile("images/ghost_green.png");
-			sprite_ghost[1].setTexture(green_ghost);
-			sprite_ghost[1].setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-			sprite_ghost[1].setScale(1, 1);
-			sprite_ghost[1].setPosition(SIZE_GRID * 9 + SIZE_GRID / 2, SIZE_GRID * 1 + SIZE_GRID / 2);
+			sprite_ghost[id].setTexture(green_ghost);
+			sprite_ghost[id].setPosition(SIZE_GRID * 9 + SIZE_GRID / 2, SIZE_GRID * 0 + SIZE_GRID / 2); // Pozycje startowe duszków
 		}
 		else if (id == 2)
 		{
 			orange_ghost.loadFromFile("images/ghost_orange.png");
-			sprite_ghost[2].setTexture(orange_ghost);
-			sprite_ghost[2].setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-			sprite_ghost[2].setScale(1, 1);
-			sprite_ghost[2].setPosition(SIZE_GRID * 0 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2);
+			sprite_ghost[id].setTexture(orange_ghost);
+			sprite_ghost[id].setPosition(SIZE_GRID * 0 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2); // Pozycje startowe duszków
 		}
 		else if (id == 3)
 		{
 			red_ghost.loadFromFile("images/ghost_red.png");
-			sprite_ghost[3].setTexture(red_ghost);
-			sprite_ghost[3].setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
-			sprite_ghost[3].setScale(1, 1);
-			sprite_ghost[3].setPosition(SIZE_GRID * 9 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2);
+			sprite_ghost[id].setTexture(red_ghost);
+			sprite_ghost[id].setPosition(SIZE_GRID * 9 + SIZE_GRID / 2, SIZE_GRID * 10 + SIZE_GRID / 2); // Pozycje startowe duszków
 		}
+
+		sprite_ghost[id].setOrigin(SIZE_GRID / 2, SIZE_GRID / 2);
+		sprite_ghost[id].setScale(1, 1);
 	}
 private:
 	int id;
-	int direction;
-	int lastDirection;
 };
 Ghost ghost1(1);
 Ghost ghost2(2);
@@ -181,7 +175,7 @@ protected:
 };
 Point point;
 
-class Fruit : public Point
+class Fruit
 {
 public:
 	int getTimeLeft()
@@ -195,7 +189,6 @@ public:
 
 	void setFruit(bool value)
 	{
-		placeFruit();
 		this->fruitSet = value;
 	}
 	void setValue(int value)
@@ -212,7 +205,7 @@ public:
 };
 Fruit fruit;
 
-class Cherry : public Fruit
+class Cherry : public Fruit, public Point
 {
 public:
 	void set(bool create)
@@ -220,6 +213,7 @@ public:
 		if (create == true)
 		{
 			fruit.setFruit(true);
+			point.placeFruit();
 			fruit.setValue(20);
 			fruit.setTime(6000);
 			fruit_texture.loadFromFile("images/cherry.png");
@@ -229,14 +223,14 @@ public:
 		else
 		{
 			fruit.setFruit(false);
-			fruit.deleteFruit();
+			point.deleteFruit();
 			sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
 		}
 	}
 };
 Cherry cherry;
 
-class Orange : public Fruit
+class Orange : public Fruit, public Point
 {
 public:
 	void set(bool create)
@@ -244,6 +238,7 @@ public:
 		if (create == true)
 		{
 			fruit.setFruit(true);
+			point.placeFruit();
 			fruit.setValue(15);
 			fruit.setTime(8000);
 			fruit_texture.loadFromFile("images/orange.png");
@@ -253,12 +248,42 @@ public:
 		else
 		{
 			fruit.setFruit(false);
-			fruit.deleteFruit();
+			point.deleteFruit();
 			sprite_fruit.setPosition(-SIZE_GRID, -SIZE_GRID);
 		}
 	}
 };
 Orange orange;
+
+
+void saveScore(string score)
+{
+	string temporary, line;
+	ifstream fileInput;
+	fileInput.open("lastScore/score.txt");
+
+	if (fileInput.is_open() == true)
+	{
+		while (getline(fileInput, line))
+		{
+			temporary = temporary + line + "\n";
+		}
+	}
+
+	ofstream fileOutput;
+	fileOutput.open("lastScore/score.txt");
+	fileOutput << temporary << score;
+	if (point.count() >= POINTS_TO_WIN)
+	{
+		fileOutput << " WINNER !!!" << endl;
+	}
+	else
+	{
+		fileOutput << " LOOSER :(" << endl;
+	}
+	fileOutput.close();
+	fileInput.close();
+}
 
 int main()
 {
@@ -338,7 +363,7 @@ int main()
 			if (pakman.checkForCollision() == true) //Sprawdzenie kolizji
 			{
 				mainWindow.close();
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "PRZEGRALES!");
+				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "YOU LOST!");
 			}
 			ghost1.move();
 			ghost2.move();
@@ -349,12 +374,12 @@ int main()
 			if (pakman.checkForCollision() == true) //Sprawdzenie kolizji
 			{
 				mainWindow.close();
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "PRZEGRALES!");
+				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "YOU LOST!");
 			}
 			else if (point.count() >= POINTS_TO_WIN) //Sprawdzenie wygranej
 			{
 				mainWindow.close();
-				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "WYGRALES!");
+				secondWindow.create(VideoMode(SIZE_WINDOW_X, SIZE_WINDOW_Y / 4, 32), "YOU WON!");
 			}
 		}
 
@@ -446,18 +471,20 @@ int main()
 	}
 	while (secondWindow.isOpen())
 	{
+
+		string pointsDisplay;
+		pointsDisplay = "Your score: " + to_string(point.count());
+		Text pointsNow(pointsDisplay, arial, 30);
+		pointsNow.setPosition(SIZE_GRID, SIZE_GRID);
+
 		while (secondWindow.pollEvent(secondaryEvent))
 		{
 			if (secondaryEvent.type == Event::Closed || (secondaryEvent.type == Event::KeyPressed && secondaryEvent.key.code == Keyboard::Escape)) // Je¿eli podczas gry naciœniemy Escape albo Krzy¿yk to okno zostanie zamkniête.
 			{
+				saveScore(pointsDisplay);
 				secondWindow.close();
 			}
 		}
-
-		string pointsDisplay;
-		pointsDisplay = "Punkty: " + to_string(point.count());
-		Text pointsNow(pointsDisplay, arial, 30);
-		pointsNow.setPosition(SIZE_GRID, SIZE_GRID);
 
 		secondWindow.draw(pointsNow);
 		secondWindow.display();
@@ -466,9 +493,6 @@ int main()
 }
 
 
-// Funkcja movePakman s³u¿y do poruszania Pakmana.
-// Funkcja sprawdza czy z aktualnej pozycji Pakmana da siê poruszyæ w zadanym kierunku i zmienia pozycjê Pakmana je¿eli to mo¿liwe.
-// Je¿eli Pakman jest w miejscu w którym znajdujê siê punkt to ten punkt jest usuwany z planszy, a dodany do tych zdobytych przez Pakmana.
 void Pakman::move()
 {
 	int position_x = (int(sprite_pakman.getPosition().x) / SIZE_GRID);
@@ -559,8 +583,6 @@ void Pakman::move()
 	}
 }
 
-// Funkcja moveGhosts s³u¿y do poruszania duszkami
-// Funkcja sprawdza czy z aktualnej pozycji duszka da siê poruszyæ w obranym kierunku i zmienia pozycjê duszka je¿eli to mo¿liwe.
 void Ghost::move()
 {
 	int ghost_x = (int(sprite_ghost[id].getPosition().x) / SIZE_GRID);
@@ -688,7 +710,7 @@ void Point::collectPoints()
 	if (fruit.isFruitset() == true && position_x == 4 && position_y == 6)
 	{
 		point.pointsTotal += fruit.value;
-		fruit.deleteFruit();
+		point.deleteFruit();
 		cherry.set(false);
 		orange.set(false);
 		startFruit = now;
